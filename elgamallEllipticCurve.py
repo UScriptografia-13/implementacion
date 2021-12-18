@@ -33,11 +33,9 @@ def modInv(a, m):
     else:
         return x % m
 
-import os
-if not os.path.exists('.\ejemplo_de_uso*'):
-    curve = elipticCurve('P-256')
-    curve.exportkeys('ejemplo_de_uso')
-print(curve.getPublicKey().curve)
+
+curve = elipticCurve('P-256')
+curve.exportkeys('ejemplo_de_uso')
 
 
 class elgamalECC_Server:
@@ -93,7 +91,7 @@ class elgamalECC_Client:
         m_int = int.from_bytes(m.encode('utf-8'), byteorder='little')
         k = random.randrange(1,self.server.order-1)
         M_point, new_point = k * self.server.G_point, k * self.server.getPublicPoint()
-        cipher = m_int * int(new_point.x)
+        cipher = (m_int * int(new_point.x)) % self.server.p
         c = {'M_point':M_point,'cipher':cipher}
         print('Mssg sent to server: {cipher}'.format(cipher=c))
         self.server.recieve_mssg(self,M_point=M_point, cipher=cipher)

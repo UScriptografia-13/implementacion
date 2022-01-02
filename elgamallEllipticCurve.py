@@ -93,6 +93,7 @@ class elgamalECC_Client:
         M_point, new_point = k * self.server.G_point, k * self.server.getPublicPoint()
         cipher = (m_int * int(new_point.x)) % self.server.p
         c = {'M_point':M_point,'cipher':cipher}
+        print(m_int)
         print('Mssg sent to server: {cipher}'.format(cipher=c))
         self.server.recieve_mssg(self,M_point=M_point, cipher=cipher)
         

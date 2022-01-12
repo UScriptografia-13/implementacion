@@ -1,5 +1,6 @@
 from Crypto.PublicKey import ECC as ecc
 from Crypto.Hash import SHA256
+from Crypto.IO import PKCS8
 
 class elipticCurve:
     def __init__(self, type):
@@ -7,6 +8,8 @@ class elipticCurve:
     
     def exportkeys(self, doc):
         f = open('{d}-private-key.pem'.format(d=doc),'wt')
+        #pas = input('Introduce contraseña para la clave: ')
+        #f.write(self.__key.export_key(format='PEM', passphrase=pas, use_pkcs8=True,protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"))
         f.write(self.__key.export_key(format='PEM'))
         f.close()
         f = open('{d}-public-key.pem'.format(d=doc),'wt')

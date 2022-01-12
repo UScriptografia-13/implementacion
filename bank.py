@@ -17,24 +17,19 @@ class bank:
         self.PointQ = self.__curveKey.pointQ
         #Calcular P1 generador
         k1 = random.randrange(1,self.order-1)
-        Point1_notmod = k1 * self.PointQ
-        self.Point1 = ecc.EccPoint(int(Point1_notmod.x)%self.p, int(Point1_notmod.y)%self.p)
+        self.Point1 = k1 * self.PointQ
         #Calcular P2 generador
         k2 = random.randrange(1,self.order-1)
         #Comprobar que es distinto k para no basarnos en el mismo punto
         while(k1 == k2):
             k2 = random.randrange(1,self.order-1)
-        Point2_notmod = k2 * self.PointQ
-        self.Point2 = ecc.EccPoint(int(Point2_notmod.x)%self.p, int(Point2_notmod.y)%self.p)
+        self.Point2 = k2 * self.PointQ
         #Calcular z exponente privado
         self.__z = random.randrange(1,self.order-1)
         #Calcular puntos derivados de la clave z
-        ZQ_notmod = self.__z * self.PointQ
-        self.ZQ = ecc.EccPoint(int(ZQ_notmod.x)%self.p, int(ZQ_notmod.y)%self.p)
-        ZP1_notmod = self.__z * self.Point1
-        ZP2_notmod = self.__z * self.Point2
-        self.ZP1 = ecc.EccPoint(int(ZP1_notmod.x)%self.p, int(ZP1_notmod.y)%self.p)
-        self.ZP2 = ecc.EccPoint(int(ZP2_notmod.x)%self.p, int(ZP2_notmod.y)%self.p)
+        self.ZQ = self.__z * self.PointQ
+        self.ZP1 = self.__z * self.Point1
+        self.ZP2 = self.__z * self.Point2
         #Iniciar registro de clientes
         self.clients = {}
         #Registro de transacciones activas, 1 a la vez por cliente
@@ -102,10 +97,8 @@ class bank:
         self.transactions[client] = w
         #R = wP
         #S = wI'
-        R_point_notmod = w * self.PointQ
-        R_point = ecc.EccPoint(int(R_point_notmod.x)%self.p,int(R_point_notmod.y)%self.p)
-        S_point_notmod = w * client.getPublicKey()
-        S_point = ecc.EccPoint(int(S_point_notmod.x)%self.p,int(S_point_notmod.y)%self.p)
+        R_point = w * self.PointQ
+        S_point = w * client.getPublicKey()
         return R_point, S_point
     
     def signature_Y_calculus(self, **signature):
@@ -213,11 +206,10 @@ class customer:
         #Calcular u aleatorio
         self.__u = random.randrange(1,self.order-1)
         # I = u*P1
-        id_notmod = self.__u * self.bank_Key.get('P1')
-        self.__id = ecc.EccPoint(int(id_notmod.x)%self.bank.getMod(),int(id_notmod.y)%self.bank.getMod())
+        self.__id = self.__u * self.bank_Key.get('P1')
+         
         # I' = I + P2
-        modifiedId_notmod = self.__id + self.bank_Key.get('P2')
-        self.modifiedId = ecc.EccPoint(int(modifiedId_notmod.x)%self.bank.getMod(),int(modifiedId_notmod.y)%self.bank.getMod())
+        self.modifiedId = self.__id + self.bank_Key.get('P2')
         #Lo suyo seria poner un regex
         customerDocument = input("Inserte su DNI (Formato 000000000X):")
         self.__dni_HASH = SHA256.new(customerDocument.encode('utf-8')).hexdigest()
@@ -251,12 +243,10 @@ class customer:
         self.__t1 = random.randrange(1,self.order-1)
         self.__t2 = random.randrange(1,self.order-1)
         # A = s * I'
-        A_point_notmod = self.__s*self.getPublicKey()
-        A_point = ecc.EccPoint(int(A_point_notmod.x)%self.bank.getMod(), int(A_point_notmod.y)%self.bank.getMod())
+        A_point = self.__s*self.getPublicKey()
         # B = t1 * P1 + t2 * P2
         B_point1, B_point2 = self.__t1*self.bank_Key.get('P1'), self.__t2*self.bank_Key.get('P2')
-        B_point_notmod = B_point1 + B_point2
-        B_point = ecc.EccPoint(int(B_point_notmod.x)%self.bank.getMod(),int(B_point_notmod.y)%self.bank.getMod())
+        B_point = B_point1 + B_point2
         #H = hash(A,B,C,R,S), deprecated, compromete el anonimato del cliente, principio fundamental para esta tecnologia
         h = SHA256.new()
         h.update(str(int(A_point.x)).encode('utf-8'))
@@ -268,25 +258,22 @@ class customer:
         #U debe tener inverso mod p; p primo con U < p
         v = random.randrange(1,self.order-1)
         #C' = s * C
-        modified_keyShared_notmod = self.__s*self.BankKeyShared()
-        modified_keyShared = ecc.EccPoint(int(modified_keyShared_notmod.x)%self.bank.getMod(),int(modified_keyShared_notmod.y)%self.bank.getMod())
+        modified_keyShared = self.__s*self.BankKeyShared()
         h.update(str(int(modified_keyShared.x)).encode('utf-8'))
         h.update(str(int(modified_keyShared.y)).encode('utf-8'))
         #R' = u * R + v * P
         modified_R1, modified_R2 = u * R, v * self.bank_Key.get('P')
-        modified_R_notmod = modified_R1 + modified_R2
-        modified_R = ecc.EccPoint(int(modified_R_notmod.x)%self.bank.getMod(),int(modified_R_notmod.y)%self.bank.getMod())
+        modified_R = modified_R1 + modified_R2
         h.update(str(int(modified_R.x)).encode('utf-8'))
         h.update(str(int(modified_R.y)).encode('utf-8'))
         #S' = s * u * S + v * A
         modified_S1, modified_S2 = (self.__s*u)%self.bank.getMod() * S, v * A_point
-        modified_S_notmod = modified_S1 + modified_S2
-        modified_S = ecc.EccPoint(int(modified_S_notmod.x)%self.bank.getMod(),int(modified_S_notmod.y)%self.bank.getMod())
+        modified_S = modified_S1 + modified_S2
         h.update(str(int(modified_S.x)).encode('utf-8'))
         h.update(str(int(modified_S.y)).encode('utf-8'))
         # r = inversa u * h
-        h_int = int("0x{hash}".format(hash=h.hexdigest()),16) % self.bank.getMod()
-        r = (elgamallEllipticCurve.modInv(u,self.bank.getMod())*h_int) % self.bank.getMod()
+        h_int = int("0x{hash}".format(hash=h.hexdigest()),16)
+        r = elgamallEllipticCurve.modInv(u,self.bank.getMod())*h_int
         print("Valor numérico de la firma resumen: {hash}".format(hash=r))
         print("Calculando valor \'y\' a partir de la firma resumen")
         y = self.send_signature(r)
@@ -296,7 +283,7 @@ class customer:
         if not is_trusted:
             raise Exception('La firma dada por el banco no cumple las ecuaciones de verificacion. No se garantiza la autenticidad de la misma')
         #Tras verificarse alterar y tal que y' = u*y +v
-        modified_y = (u * y + v) % self.bank.getMod()
+        modified_y = u * y + v
         #Debe poder verificar las ecuaciones modificadas
         is_trusted_new_y = self.verify_signature(r_point=modified_R,s_point=modified_S,to_verify=modified_y,signature=h_int, key_value=A_point, common_key=modified_keyShared)
         if not is_trusted:
@@ -315,12 +302,9 @@ class customer:
     def verify_signature(self,**kwargs):
         #Verificar yP = rQ + R o modificado, y'P = hQ + R'
         #Verificar yI' = rC + S o modificado, y'A = hC' +S'
-        y1_product_notmod, y2_product_notmod = kwargs.get('to_verify')*self.bank_Key.get('P'), kwargs.get('to_verify')*kwargs.get('key_value')
-        y1_product,y2_product = ecc.EccPoint(int(y1_product_notmod.x)%self.bank.getMod(),int(y1_product_notmod.y)%self.bank.getMod()),ecc.EccPoint(int(y2_product_notmod.x)%self.bank.getMod(),int(y2_product_notmod.y)%self.bank.getMod())
-        ec1_product_notmod, ec2_product_notmod = kwargs.get('signature')*self.bank_Key.get('Q'),kwargs.get('signature')*kwargs.get('common_key')
-        ec1_product, ec2_product = ecc.EccPoint(int(ec1_product_notmod.x)%self.bank.getMod(),int(ec1_product_notmod.y)%self.bank.getMod()),ecc.EccPoint(int(ec2_product_notmod.x)%self.bank.getMod(),int(ec2_product_notmod.y)%self.bank.getMod())
-        ec1_notmod, ec2_notmod = ec1_product + kwargs.get('r_point'), ec2_product + kwargs.get('s_point')
-        ec1, ec2 = ecc.EccPoint(int(ec1_notmod.x)%self.bank.getMod(),int(ec1_notmod.y)%self.bank.getMod()),ecc.EccPoint(int(ec2_notmod.x)%self.bank.getMod(),int(ec2_notmod.y)%self.bank.getMod())
+        y1_product, y2_product = kwargs.get('to_verify')*self.bank_Key.get('P'), kwargs.get('to_verify')*kwargs.get('key_value')
+        ec1_product, ec2_product = kwargs.get('signature')*self.bank_Key.get('Q'),kwargs.get('signature')*kwargs.get('common_key')
+        ec1, ec2 = ec1_product+kwargs.get('r_point'), ec2_product+kwargs.get('s_point')
         print('yp:{yp}\nya:{ya}\ne1:{e1}\ne2:{e2}'.format(yp = (int(y1_product.x),int(y1_product.y)),ya=(int(y2_product.x),int(y2_product.y)),e1=(int(ec1.x),int(ec1.y)),e2=(int(ec2.x),int(ec2.y))  ))
         return y1_product==ec1 and y2_product==ec2
 
@@ -347,8 +331,8 @@ class customer:
         #y1 = u1*s*h0 + t1
         #y2 = s*h0 + t2
         mh = int("0x{hash}".format(hash=merchant_hash.hexdigest()),16)
-        y1 = (((self.__u * self.__s)%self.bank.getMod()) * mh + self.__t1) % self.bank.getMod()
-        y2 = (self.__s * mh + self.__t2) % self.bank.getMod()
+        y1 = self.__u * self.__s * mh + self.__t1
+        y2 = self.__s * mh + self.__t2
         if not merchant.merchant_verify_coin(y1=y1,y2=y2,coin=data.get('Coin'),hash=merchant_hash):
             raise Exception('Los valores y1 e y2 calculados no son validos')
         result = data.copy()
